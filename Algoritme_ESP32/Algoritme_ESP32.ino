@@ -1,21 +1,16 @@
-const int fsrPin = 32;     // the FSR and 10K pulldown are connected to a0
-const int LED = 2; //Denkbeeldige LED (kunnen we gebruiken voor datum te ontvangen)
-int fsrReading;     // the analog reading from the FSR resistor divider
+const int fsrPin = 32;     // The FSR and 10K pulldown are connected to pin 32
+int fsrReading; // The analog reading from the FSR resistor
 int TUSSENTIJDSlist[20];
-//int TUSSENTIJDSlistlength = 0;
-//int lijst[10];
-//int zitStaanList[20];
-//int zitStaanListlength = 0;
 
-
+//int -> ToSendValue and PreviousValue
 int TeVersturenWaarde;
 int VorigeVerstuurdeWaarde;
 String tijdstip;
 
-//Voor de tijd
+//For Time
 #include <TimeLib.h>
 
-//Voor bluetooth
+//For Bluetooth Low Energy
 #include <BLEDevice.h>
 #include <BLEServer.h>
 #include <BLEUtils.h>
@@ -23,21 +18,19 @@ String tijdstip;
 
 //BLE characteristics
 BLECharacteristic *pCharacteristic;
+
+//bool for Device connected or not
 bool deviceConnected = false;
 float txValue = 0;
 
-//Definiëren van de service en characteristics
+//Define the service and characteristics
 #define SERVICE_UUID           "6E400001-B5A3-F393-E0A9-E50E24DCCA9E" // UART service UUID
 #define CHARACTERISTIC_UUID_RX "6E400002-B5A3-F393-E0A9-E50E24DCCA9E"
 #define CHARACTERISTIC_UUID_TX "6E400003-B5A3-F393-E0A9-E50E24DCCA9E"
 
-//Definiëren van de tijd
 #define TIME_HEADER  "T"   // Header tag for serial time sync message
 
-//Deze tijd moet meegegeven worden door de Xamarin App (WRITE?) --> valt weg
-long Ttime = 0; // hier komt het aantal seconden die nico berekent. Nu - (0:00:00 01 01 1970) + 3600 (--> tijdzone)
-
-//Klasse voor de servercallbacks (Device verbonden of niet)
+//Class for the servercallbacks (Device connected or not)
 class MyServerCallbacks: public BLEServerCallbacks {
     void onConnect(BLEServer* pServer) {
       deviceConnected = true;
@@ -51,11 +44,10 @@ class MyServerCallbacks: public BLEServerCallbacks {
 //================================================================
 
 void setup(void) {
-  // Debugging informatie via de Serial monitor
+  // Debugging information via the Serial monitor
   Serial.begin(9600);
-  setTime(Ttime);
 
-  //HIERNA VOLGT ALLEMAAL CODE VOOR DE BLUETOOTH, ONDERANDERE SERVER, SERVICE, CHARACTERISTICS
+  //CODE FOR THE BLUETOOTH, SERVER, SERVICE, CHARACTERISTICS
 
   // Create the BLE Device
   BLEDevice::init("Imani tracker 0001"); // Bluetooth naamgeving
@@ -80,7 +72,7 @@ void setup(void) {
 
   // Start advertising
   pServer->getAdvertising()->start();
-  Serial.println("Wachten op een client connection om notify te versturen...");
+  Serial.println("Waiting for a client connection to notify...");
 }
 
 void loop(void) {
@@ -133,34 +125,32 @@ void loop(void) {
 
 
   if (VorigeVerstuurdeWaarde != TeVersturenWaarde) {
-    // DIT MOET JE DOORSTUREN: TeVersturenWaarde, (tijdstip)
+    // THIS VALUE HAS TO BE SEND: TeVersturenWaarde
     // in plaats van de print stuur je (ook) door
-    Serial.println("Te versturen waarde:" + TeVersturenWaarde);
-    Serial.println("Tijdstip: " + tijdstip);
-
+    Serial.println("Value to send:" + TeVersturenWaarde);
+    Serial.println("Time: " + tijdstip);
 
     VorigeVerstuurdeWaarde = TeVersturenWaarde;
     countStaan = 0;
 
-
   //==================================================================
-    //BLE verzenden
+    //BLE send
   
     if (deviceConnected) {
-        //Als de device verbonden is geven we de te versturen waarde mee om deze te versturen
+        //If the device is connected da data will be sent
         //txValue = analogRead(readPin) // Sensor reading!
         txValue = TeVersturenWaarde;
     
-        // Conversie van de waarde
+        // Conversion from the value
         char txString[8];
         dtostrf(txValue, 1, 2, txString);
         
-      //pCharacteristic->setValue(&txValue, 1); // integer value
-      //pCharacteristic->setValue("Hello!"); // Test bericht
+      //pCharacteristic->setValue(&txValue, 1); // Integer value
+      //pCharacteristic->setValue("Hello!"); // Test message
         pCharacteristic->setValue(txString);
         
-        pCharacteristic->notify(); // Verzenden van de waarde naar de app!
-        Serial.print("Verzonden waarde: ");
+        pCharacteristic->notify(); // Sending from the value to the app!
+        Serial.print("Sent value: ");
         Serial.print(txString);
       }
     }
@@ -170,7 +160,7 @@ void loop(void) {
 //================================================================
 
 
-//Hier komt de tijdberekening
+//Time calculation
 void tijdstipToString() {
 
   String seconde;
